@@ -142,15 +142,15 @@ class SignUp extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   SocialButton(
-                    imageUrl: 'https://via.placeholder.com/24',
+                    imageUrl: 'https://tse2.mm.bing.net/th?id=OIP.mVfYLYPIF9w_J5nhVEO6fAHaHa&pid=Api&P=0&w=300&h=300',
                     padding: EdgeInsets.all(2.62),
                   ),
                   SocialButton(
-                    imageUrl: 'https://via.placeholder.com/24',
+                    imageUrl: 'https://tse2.mm.bing.net/th?id=OIP.CvL4m3FUEJ3P1Rv27khUVwHaHa&pid=Api&P=0&h=180',
                     padding: EdgeInsets.all(2),
                   ),
                   SocialButton(
-                    imageUrl: 'https://via.placeholder.com/24',
+                    imageUrl: 'https://s3.amazonaws.com/freebiesupply/large/2x/apple-logo-transparent.png',
                     padding: EdgeInsets.all(3),
                   ),
                 ],
