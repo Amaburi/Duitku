@@ -97,7 +97,7 @@ class Description2 extends StatelessWidget {
                         child:  GestureDetector(
                           onTap: (){
                             Navigator.pushReplacement(context,
-                                MaterialPageRoute(builder: (context)=> const SignUp())
+                                MaterialPageRoute(builder: (context)=>  SignUp())
                             );
                           },
                           child: Text(

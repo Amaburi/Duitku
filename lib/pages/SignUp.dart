@@ -1,7 +1,80 @@
+import 'package:duitkuproto/pages/Home.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:duitkuproto/pages/SignIn.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-class SignUp extends StatelessWidget {
-  const SignUp({super.key});
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Your App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: SignUp(),
+    );
+  }
+}
+
+class SignUp extends StatefulWidget {
+  @override
+  _SignUpState createState() => _SignUpState();
+}
+
+class _SignUpState extends State<SignUp> {
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController confirmPasswordController = TextEditingController();
+  bool isLoading = false;
+  String? errorText;
+
+  Future<void> _registerUser() async {
+    setState(() {
+      isLoading = true;
+      errorText = null;
+    });
+
+    try {
+      if (passwordController.text == confirmPasswordController.text) {
+        UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: emailController.text,
+          password: passwordController.text,
+        );
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const SignIn()));
+      } else {
+        setState(() {
+          errorText = "Passwords do not match.";
+        });
+      }
+    } on FirebaseAuthException catch (e) {
+      setState(() {
+        if (e.code == 'weak-password') {
+          errorText = 'The password provided is too weak.';
+        } else if (e.code == 'email-already-in-use') {
+          errorText = 'The account already exists for that email.';
+        } else {
+          errorText = e.message; // Handle other errors
+        }
+      });
+    } catch (e) {
+      setState(() {
+        errorText = e.toString();
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -18,7 +91,9 @@ class SignUp extends StatelessWidget {
             end: Alignment.bottomRight,
           ),
         ),
-        child: SingleChildScrollView(
+        child: isLoading
+            ? Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
           child: Column(
             children: [
               SizedBox(height: screenHeight * 0.1),
@@ -48,6 +123,7 @@ class SignUp extends StatelessWidget {
                 label: 'Email',
                 icon: Icons.email,
                 width: screenWidth * 0.8,
+                controller: emailController,
               ),
               SizedBox(height: 20),
               CustomInputField(
@@ -55,6 +131,7 @@ class SignUp extends StatelessWidget {
                 icon: Icons.lock,
                 width: screenWidth * 0.8,
                 obscureText: true,
+                controller: passwordController,
               ),
               SizedBox(height: 20),
               CustomInputField(
@@ -62,14 +139,22 @@ class SignUp extends StatelessWidget {
                 icon: Icons.lock,
                 width: screenWidth * 0.8,
                 obscureText: true,
+                controller: confirmPasswordController,
               ),
+              if (errorText != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Text(
+                    errorText!,
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
               SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: _registerUser,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF5774CD),
-                  padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.25, vertical: 15),
+                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.25, vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -100,8 +185,8 @@ class SignUp extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Text.rich(
-                  TextSpan(
+                child: RichText(
+                  text: TextSpan(
                     children: [
                       TextSpan(
                         text: 'Already have an account? ',
@@ -119,11 +204,15 @@ class SignUp extends StatelessWidget {
                           fontSize: 11,
                           fontFamily: 'Poppins',
                           fontWeight: FontWeight.w700,
+                          decoration: TextDecoration.underline,
                         ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () {
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => SignIn()));
+                          },
                       ),
                     ],
                   ),
-                  textAlign: TextAlign.center,
                 ),
               ),
               SizedBox(height: screenHeight * 0.05),
@@ -163,57 +252,31 @@ class SignUp extends StatelessWidget {
   }
 }
 
-class CustomInputField extends StatefulWidget {
+class CustomInputField extends StatelessWidget {
   final String label;
   final IconData icon;
   final double width;
   final bool obscureText;
+  final TextEditingController controller;
 
   const CustomInputField({
     required this.label,
     required this.icon,
     required this.width,
     this.obscureText = false,
+    required this.controller,
   });
-
-  @override
-  _CustomInputFieldState createState() => _CustomInputFieldState();
-}
-
-class _CustomInputFieldState extends State<CustomInputField> {
-  late FocusNode _focusNode;
-  bool _isFocused = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _focusNode = FocusNode();
-    _focusNode.addListener(_onFocusChange);
-  }
-
-  @override
-  void dispose() {
-    _focusNode.removeListener(_onFocusChange);
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  void _onFocusChange() {
-    setState(() {
-      _isFocused = _focusNode.hasFocus;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: widget.width,
+      width: width,
       child: TextField(
-        focusNode: _focusNode,
-        obscureText: widget.obscureText,
+        obscureText: obscureText,
+        controller: controller,
         decoration: InputDecoration(
-          prefixIcon: Icon(widget.icon, color: Color(0xFF616161)),
-          labelText: _isFocused ? null : widget.label,
+          prefixIcon: Icon(icon, color: Color(0xFF616161)),
+          labelText: label,
           labelStyle: TextStyle(
             color: Color(0xFF616161),
             fontSize: 16,
@@ -260,7 +323,7 @@ class SocialButton extends StatelessWidget {
           ),
         ],
       ),
-      child: Image.network(imageUrl, fit: BoxFit.contain),
+      child: Image.network(imageUrl, fit: BoxFit.contain,),
     );
   }
 }

@@ -1,9 +1,77 @@
+import 'package:duitkuproto/pages/Home.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:math' as math;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
-class SignIn extends StatelessWidget {
+class AuthService {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  Future<User?> loginWithEmailPassword(String email, String password, BuildContext context) async {
+    try {
+      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      return userCredential.user;
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        _showSnackBar(context, 'User not found');
+      } else if (e.code == 'wrong-password') {
+        _showSnackBar(context, 'Wrong password provided.');
+      } else {
+        _showSnackBar(context, 'An error occurred. Please try again.');
+      }
+      return null;
+    } catch (e) {
+      _showSnackBar(context, 'An unexpected error occurred.');
+      return null;
+    }
+  }
+
+  void _showSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+}
+
+class SignIn extends StatefulWidget {
   const SignIn({super.key});
+
+  @override
+  _SignInState createState() => _SignInState();
+}
+
+class _SignInState extends State<SignIn> {
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  bool showSpinner = false;
+
+  void _signIn() async {
+    setState(() {
+      showSpinner = true;
+    });
+    try {
+      await AuthService().loginWithEmailPassword(
+        emailController.text.trim(),
+        passwordController.text.trim(),
+        context
+      );
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=> Home()));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      setState(() {
+        showSpinner = false;
+      });
+    }
+
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,17 +118,20 @@ class SignIn extends StatelessWidget {
               InputField(
                 label: 'Email',
                 icon: Icons.email,
+                controller: emailController,
                 width: screenWidth * 0.8,
               ),
               SizedBox(height: 20),
               InputField(
                 label: 'Password',
                 icon: Icons.lock,
+                controller: passwordController,
                 width: screenWidth * 0.8,
+                isPassword: true,
               ),
               SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: _signIn,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF5774CD),
                   padding: EdgeInsets.symmetric(
@@ -71,7 +142,11 @@ class SignIn extends StatelessWidget {
                   elevation: 20,
                   shadowColor: Color(0xFFCAD6FF),
                 ),
-                child: Text(
+                child: showSpinner
+                    ? CircularProgressIndicator(
+                  color: Colors.white,
+                )
+                    : Text(
                   'Sign in',
                   style: TextStyle(
                     color: Colors.white,
@@ -99,7 +174,7 @@ class SignIn extends StatelessWidget {
                   TextSpan(
                     children: [
                       TextSpan(
-                        text: 'Already have an account? ',
+                        text: 'Not having the account? ',
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: 11,
@@ -108,7 +183,7 @@ class SignIn extends StatelessWidget {
                         ),
                       ),
                       TextSpan(
-                        text: 'Sign In',
+                        text: 'Sign Up',
                         style: TextStyle(
                           color: Color(0xFF5774CD),
                           fontSize: 11,
@@ -137,15 +212,15 @@ class SignIn extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   SocialButton(
-                    imageUrl: 'https://via.placeholder.com/24',
+                    imageUrl: 'assets/facebook.png', // Replace with local asset
                     padding: EdgeInsets.all(2.62),
                   ),
                   SocialButton(
-                    imageUrl: 'https://via.placeholder.com/24',
+                    imageUrl: 'assets/google.png', // Replace with local asset
                     padding: EdgeInsets.all(2),
                   ),
                   SocialButton(
-                    imageUrl: 'https://via.placeholder.com/24',
+                    imageUrl: 'assets/apple.png', // Replace with local asset
                     padding: EdgeInsets.all(3),
                   ),
                 ],
@@ -162,8 +237,16 @@ class InputField extends StatelessWidget {
   final String label;
   final IconData icon;
   final double width;
+  final TextEditingController controller;
+  final bool isPassword;
 
-  const InputField({required this.label, required this.icon, required this.width});
+  const InputField({
+    required this.label,
+    required this.icon,
+    required this.width,
+    required this.controller,
+    this.isPassword = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -188,13 +271,20 @@ class InputField extends StatelessWidget {
         children: [
           Icon(icon, color: Color(0xFF616161)),
           SizedBox(width: 10),
-          Text(
-            label,
-            style: TextStyle(
-              color: Color(0xFF616161),
-              fontSize: 16,
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w500,
+          Expanded(
+            child: TextField(
+              controller: controller,
+              obscureText: isPassword,
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                labelText: label,
+                labelStyle: TextStyle(
+                  color: Color(0xFF616161),
+                  fontSize: 16,
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
           ),
         ],
@@ -202,6 +292,7 @@ class InputField extends StatelessWidget {
     );
   }
 }
+
 
 class SocialButton extends StatelessWidget {
   final String imageUrl;
@@ -227,7 +318,7 @@ class SocialButton extends StatelessWidget {
           ),
         ],
       ),
-      child: Image.network(imageUrl, fit: BoxFit.contain),
+      child: Image.asset(imageUrl, fit: BoxFit.contain),
     );
   }
 }
